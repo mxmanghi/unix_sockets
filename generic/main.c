@@ -93,7 +93,7 @@ static int outputProc(cdata, buf, toWrite, errorCodePtr) //<<<
 	int			wrote;
 	uds_state *	con = (uds_state *)cdata;
 
-	wrote = write(con->fd, buf, toWrite);
+	wrote = send(con->fd, buf, (size_t)toWrite, 0);
 	if (wrote == -1)
 		*errorCodePtr = errno;
 
