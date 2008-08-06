@@ -1,4 +1,4 @@
-.TH unix_sockets n 4.1 "Tcl-Extensions"
+.TH unix_sockets n 0.1 "Tcl-Extensions"
 .HS unix_sockets tcl
 .de CS
 .RS
@@ -29,7 +29,7 @@ in it's parent directory.  When a client connects to the listening socket,
 \fIaccept_handler\fR is invoked with the channel handle of the new client
 connection appended.
 .TP
-\fBunix::sockets::connect\fI path\fR
+\fBunix_sockets::connect\fI path\fR
 .
 Connect as a client to the unix domain socket \fIpath\fR.  The channel
 handle for the new socket is returned.
