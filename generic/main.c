@@ -48,6 +48,8 @@ static int closeProc(cdata, interp) //<<<
 
 	//fprintf(stderr, "closeProc(%s)\n", con->name);
 
+	Tcl_DeleteFileHandler(con->fd);
+
 	if (con->accept_handler != NULL) {
 		unlink(Tcl_GetString(con->path));
 		Tcl_DecrRefCount(con->accept_handler);
