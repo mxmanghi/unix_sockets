@@ -19,7 +19,8 @@ unix_sockets \- Communicate using unix domain sockets
 .br
 .SH DESCRIPTION
 Unix domain sockets are a filesystem based IPC mechanism similar to IP sockets,
-except that they can only be used by processes on the same system.
+except that they can only be used by processes on the same system.  This
+package provides a wrapper to use them from Tcl scripts.
 .TP
 \fBunix_sockets::listen\fI path accept_handler\fR
 .
