@@ -110,19 +110,26 @@ static int blockModeProc(cdata, mode) //<<<
 	int				mode;
 {
 	uds_state *	con = (uds_state *)cdata;
-	int			flags, err;
+	int			before, flags, err;
 
+	flags = 0;
 	err = fcntl(con->fd, F_GETFL, &flags);
 	if (err == -1) return errno;
+#ifdef O_DELAY
+	flags &= ~O_NDELAY;
+#endif
+	before = flags;
 
 	if (mode == TCL_MODE_BLOCKING) {
-		flags |= O_NONBLOCK;
-	} else {
 		flags &= ~O_NONBLOCK;
+	} else {
+		flags |= O_NONBLOCK;
 	}
 
 	err = fcntl(con->fd, F_SETFL, flags);
-	if (err == -1) return errno;
+	if (err == -1) {
+		return Tcl_GetErrno();
+	}
 	/*
 	ioctl(con->fd, FIONBIO, 1);
 	*/
