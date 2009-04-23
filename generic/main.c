@@ -8,6 +8,8 @@
 #include "uds.h"
 #include "config.h"
 
+//#include <sys/ioctl.h>
+
 
 static Tcl_ChannelType unix_socket_channel_type = {
 	"unix_socket",
@@ -121,6 +123,9 @@ static int blockModeProc(cdata, mode) //<<<
 
 	err = fcntl(con->fd, F_SETFL, flags);
 	if (err == -1) return errno;
+	/*
+	ioctl(con->fd, FIONBIO, 1);
+	*/
 
 	return 0;
 }
