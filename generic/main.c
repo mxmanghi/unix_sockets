@@ -1,4 +1,4 @@
-#include <tclstuff.h>
+#include "tclstuff.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
