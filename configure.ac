@@ -190,4 +190,5 @@ TEA_PROG_TCLSH
 # which require substituting th AC variables in.  Include these here.
 #--------------------------------------------------------------------
 
-AC_OUTPUT([Makefile pkgIndex.tcl generic/config.h teapot.txt])
+AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/config.h teapot.txt])
+AC_OUTPUT

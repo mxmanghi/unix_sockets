@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -110,7 +111,7 @@ static int blockModeProc(cdata, mode) //<<<
 	int				mode;
 {
 	uds_state *	con = (uds_state *)cdata;
-	int			before, flags, err;
+	int			flags, err;
 
 	flags = 0;
 	err = fcntl(con->fd, F_GETFL, &flags);
@@ -118,7 +119,6 @@ static int blockModeProc(cdata, mode) //<<<
 #ifdef O_DELAY
 	flags &= ~O_NDELAY;
 #endif
-	before = flags;
 
 	if (mode == TCL_MODE_BLOCKING) {
 		flags &= ~O_NONBLOCK;
@@ -160,7 +160,8 @@ static int getHandleProc(cdata, direction, handlePtr) //<<<
 {
 	uds_state *	con = (uds_state *)cdata;
 
-	*handlePtr = (ClientData)con->fd;
+	ptrdiff_t	cd = con->fd;
+	*handlePtr = (ClientData)cd;
 
 	return TCL_OK;
 }
@@ -239,7 +240,7 @@ static int glue_listen(cdata, interp, objc, objv) //<<<
 
 	server_sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	server_address.sun_family = AF_UNIX;
-	strcpy(server_address.sun_path, path);
+	strncpy(server_address.sun_path, path, 107);
 	server_len = sizeof(server_address);		// should this be SUN_LEN()?
 	unlink(server_address.sun_path);
 	bind(server_sockfd, (struct sockaddr *)&server_address, server_len);
