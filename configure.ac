@@ -30,6 +30,8 @@ AC_INIT([unix_sockets], [0.2])
 TEA_INIT([3.6])
 
 AC_CONFIG_AUX_DIR(tclconfig)
+AC_CONFIG_HEADERS([config.h])
+#AC_CONFIG_SRCDIR([config.h])
 
 #--------------------------------------------------------------------
 # Load the tclConfig.sh file
@@ -190,5 +192,6 @@ TEA_PROG_TCLSH
 # which require substituting th AC variables in.  Include these here.
 #--------------------------------------------------------------------
 
-AC_CONFIG_FILES([Makefile pkgIndex.tcl generic/config.h teapot.txt])
+
+AC_CONFIG_FILES([Makefile pkgIndex.tcl teapot.txt generic/config.h])
 AC_OUTPUT
