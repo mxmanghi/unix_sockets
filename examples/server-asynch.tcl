@@ -33,7 +33,7 @@ proc readable {con} {
         chan flush $con
 
         # this command shuts down the server
-        if {$msg == "EXIT"} {
+        if {$msg eq "EXIT"} {
             incr ::wait_for_events
         }
 

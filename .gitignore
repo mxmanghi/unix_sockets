@@ -12,3 +12,6 @@ core.*
 pkgIndex.tcl
 teapot.txt
 teapot
+configure~
+config.h
+
