@@ -70,7 +70,7 @@ jobs:
         draft: false
         prerelease: true
         files: |
-          /tmp/dist/unix_sockets-*.tar.gz
+          /tmp/dist/unix_sockets*.tar.gz
 
 #    - name: debug
 #      if: ${{ failure() }}
