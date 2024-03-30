@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so you can encode the package version directly into the source files.
 #-----------------------------------------------------------------------
 
-AC_INIT([unix_sockets], [0.3])
+AC_INIT([unix_sockets], [0.4])
 
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
@@ -30,7 +30,7 @@ AC_INIT([unix_sockets], [0.3])
 TEA_INIT([3.6])
 
 AC_CONFIG_AUX_DIR(tclconfig)
-AC_CONFIG_HEADERS([config.h])
+#AC_CONFIG_HEADERS([generic/config.h])
 #AC_CONFIG_SRCDIR([config.h])
 
 #--------------------------------------------------------------------
@@ -193,5 +193,5 @@ TEA_PROG_TCLSH
 #--------------------------------------------------------------------
 
 
-AC_CONFIG_FILES([Makefile pkgIndex.tcl teapot.txt generic/config.h])
+AC_CONFIG_FILES([Makefile pkgIndex.tcl Makefile.teabase generic/config.h])
 AC_OUTPUT

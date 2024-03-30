@@ -10,8 +10,6 @@ generic/config.h
 core
 core.*
 pkgIndex.tcl
-teapot.txt
-teapot
 configure~
-config.h
+Makefile.teabase
 

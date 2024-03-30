@@ -336,7 +336,7 @@ int Unix_sockets_Init(Tcl_Interp *interp) //<<<
 	NEW_CMD("unix_sockets::listen", glue_listen);
 	NEW_CMD("unix_sockets::connect", glue_connect);
 
-	TEST_OK(Tcl_PkgProvide(interp, UDS_PKGNAME, UDS_PKGVERSION));
+	TEST_OK(Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION));
 
 	return TCL_OK;
 }

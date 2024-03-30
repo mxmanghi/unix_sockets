@@ -89,6 +89,7 @@ top_builddir	= .
 
 INSTALL		= @INSTALL@
 INSTALL_PROGRAM	= @INSTALL_PROGRAM@
+INSTALL_DATA_DIR = ${INSTALL} -d -m 755
 INSTALL_DATA	= @INSTALL_DATA@
 INSTALL_SCRIPT	= @INSTALL_SCRIPT@
 
@@ -157,7 +158,7 @@ PKG_CFLAGS	= @PKG_CFLAGS@
 DEFS		= @DEFS@ $(PKG_CFLAGS)
 
 # Move pkgIndex.tcl to 'BINARIES' var if it is generated in the Makefile
-CONFIG_CLEAN_FILES = Makefile pkgIndex.tcl teapot.txt generic/config.h
+CONFIG_CLEAN_FILES = Makefile pkgIndex.tcl generic/config.h
 CLEANFILES	= @CLEANFILES@
 
 CPPFLAGS	= @CPPFLAGS@
@@ -291,38 +292,59 @@ VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win
 #========================================================================
 
 #COMPRESS	= tar cvf $(PKG_DIR).tar $(PKG_DIR); compress $(PKG_DIR).tar
-COMPRESS	= gtar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
+COMPRESS	= tar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
 DIST_ROOT	= /tmp/dist
 DIST_DIR	= $(DIST_ROOT)/$(PKG_DIR)
 
+DIST_INSTALL_DATA	= CPPROG='cp -p' $(INSTALL) -m 644
+DIST_INSTALL_SCRIPT	= CPPROG='cp -p' $(INSTALL)
+DIST_INSTALL_ASIS	= cp -a
+
 dist-clean:
-	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(PKG_DIR).tar.*
+	-rm -rf $(DIST_DIR) $(DIST_ROOT)/$(PKG_DIR).tar.*
 
 dist: dist-clean
-	mkdir -p $(DIST_DIR)
-	cp -p $(srcdir)/ChangeLog $(srcdir)/README* $(srcdir)/license* \
-		$(srcdir)/aclocal.m4 $(srcdir)/configure $(srcdir)/*.in \
-		$(DIST_DIR)/
-	chmod 664 $(DIST_DIR)/Makefile.in $(DIST_DIR)/aclocal.m4
-	chmod 775 $(DIST_DIR)/configure $(DIST_DIR)/configure.in
+	$(INSTALL_DATA_DIR) $(DIST_ROOT)
+	$(INSTALL_DATA_DIR) $(DIST_DIR)
 
-	for i in $(srcdir)/*.[ch]; do \
-	    if [ -f $$i ]; then \
-		cp -p $$i $(DIST_DIR)/ ; \
-	    fi; \
-	done;
+	# TEA files
+	$(DIST_INSTALL_DATA) $(srcdir)/Makefile.in \
+	    $(srcdir)/aclocal.m4 $(srcdir)/configure.ac \
+	    $(DIST_DIR)/
+	$(DIST_INSTALL_SCRIPT) $(srcdir)/configure $(DIST_DIR)/
 
-	mkdir $(DIST_DIR)/tclconfig
-	cp $(srcdir)/tclconfig/install-sh $(srcdir)/tclconfig/tcl.m4 \
-		$(DIST_DIR)/tclconfig/
-	chmod 664 $(DIST_DIR)/tclconfig/tcl.m4
-	chmod +x $(DIST_DIR)/tclconfig/install-sh
+	$(INSTALL_DATA_DIR) $(DIST_DIR)/tclconfig
+	$(DIST_INSTALL_DATA) $(srcdir)/tclconfig/README.txt \
+	    $(srcdir)/tclconfig/tcl.m4 $(srcdir)/tclconfig/install-sh \
+	    $(DIST_DIR)/tclconfig/
 
-	list='demos doc generic library mac tests unix win'; \
+	$(INSTALL_DATA_DIR) $(DIST_DIR)/teabase
+	$(DIST_INSTALL_DATA) \
+	    $(srcdir)/teabase/teabase.m4 \
+	    $(srcdir)/teabase/ax_cc_for_build.m4 \
+	    $(srcdir)/teabase/ax_check_compile_flag.m4 \
+	    $(srcdir)/teabase/ax_gcc_builtin.m4 \
+	    $(DIST_DIR)/teabase/
+
+	$(INSTALL_DATA_DIR) $(DIST_DIR)/bench
+	$(DIST_INSTALL_DATA) \
+		$(srcdir)/teabase/teabase_bench-0.1.tm \
+		$(DIST_DIR)/bench/
+
+	# Extension files
+	$(DIST_INSTALL_DATA) \
+	    $(srcdir)/README.md \
+	    $(srcdir)/license.terms \
+	    $(srcdir)/pkgIndex.tcl.in \
+	    $(srcdir)/Makefile.teabase.in \
+	    $(srcdir)/suppressions \
+	    $(DIST_DIR)/
+
+	list='demos doc generic library mac tests unix win bench'; \
 	for p in $$list; do \
 	    if test -d $(srcdir)/$$p ; then \
-		mkdir $(DIST_DIR)/$$p; \
-		cp -p $(srcdir)/$$p/*.* $(DIST_DIR)/$$p/; \
+		$(INSTALL_DATA_DIR) $(DIST_DIR)/$$p; \
+		$(DIST_INSTALL_DATA) $(srcdir)/$$p/* $(DIST_DIR)/$$p/; \
 	    fi; \
 	done
 
@@ -337,7 +359,7 @@ dist: dist-clean
 # variable in configure.in
 #========================================================================
 
-clean:  
+clean:
 	-test -z "$(BINARIES)" || rm -f $(BINARIES)
 	-rm -f *.$(OBJEXT) core *.core
 	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
@@ -430,15 +452,9 @@ uninstall-binaries:
 	  rm -f $(DESTDIR)$(bindir)/$$p; \
 	done
 
-teapot: all
-	-rm -f teapot/*
-	teapot-pkg generate --type zip --output teapot .
-
-refresh-teapot: teapot
-	teacup remove unix_sockets
-	teacup install teapot/*
-
 .PHONY: all binaries clean depend distclean doc install libraries test
+
+include $(top_builddir)/Makefile.teabase
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
