@@ -1,0 +1,5 @@
+2024-10-25 Massimo Manghi <massimo.manghi@rivetweb.org>
+	* ChangeLog: add ChangeLog file
+	* generic/main.c: calling strerror to get a readable reason for
+	a connection error
+

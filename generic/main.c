@@ -303,8 +303,10 @@ static int glue_connect(cdata, interp, objc, objv) //<<<
 	sockaddr_len = sizeof(address);
 	result = connect(fd, (struct sockaddr *)&address, sockaddr_len);
 	if (result == -1)
-		THROW_ERROR("Could not connect to unix socket: \"", path, "\"");
-
+    {
+        int error_code = errno;
+		THROW_ERROR("Could not connect to unix socket: \"", path, "\"", "(", strerror(error_code), ")");
+    }
 	sprintf(channel_name, "unix_socket%d", fd);
 
 	con = (uds_state *)ckalloc(sizeof(uds_state));
