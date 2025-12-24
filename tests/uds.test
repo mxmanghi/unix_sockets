@@ -35,6 +35,7 @@ test uds-1.2 {echo loopback} -body { #<<<
 		}
 	}]]
 	set client	[unix_sockets::connect [file join $sockdir uds-1.2]]
+	#puts stderr "client sock configure: [chan configure $client]"
 	chan configure $client -blocking 1
 	chan event $client readable [list apply {
 		{con} {
