@@ -42,10 +42,18 @@
 # define TCL_SIZE_MODIFIER ""
 #endif
 
+static int close2Proc(void* cdata, Tcl_Interp* interp, int flags);
+
+#if TCL_MAJOR_VERSION >= 9
+#  define UNIX_SOCKET_CLOSEPROC  NULL
+#else
+#  define UNIX_SOCKET_CLOSEPROC  TCL_CLOSE2PROC
+#endif
+
 static Tcl_ChannelType unix_socket_channel_type = {
 	"unix_socket",
 	TCL_CHANNEL_VERSION_5,
-	closeProc,
+	UNIX_SOCKET_CLOSEPROC,
 	inputProc,
 	outputProc,
 	NULL,	//seekProc				// NULLable
@@ -53,7 +61,7 @@ static Tcl_ChannelType unix_socket_channel_type = {
 	NULL,	//getOptionProc			// NULLable
 	watchProc,
 	getHandleProc,
-	NULL,	//close2Proc			// NULLable
+	close2Proc,
 	blockModeProc,					// NULLable
 	NULL,	//flushProc				// NULLable
 	NULL,	//handlerProc			// NULLable
@@ -71,7 +79,8 @@ typedef struct uds_state {
 	Tcl_Obj *		path;
 } uds_state;
 
-static int closeProc(ClientData cdata,Tcl_Interp* interp) //<<<
+//>>>
+static int close2Proc(ClientData cdata,Tcl_Interp* interp,int flags) //<<<
 {
 	uds_state *	con = (uds_state *)cdata;
 
