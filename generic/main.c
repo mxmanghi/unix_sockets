@@ -42,19 +42,9 @@
 # define TCL_SIZE_MODIFIER ""
 #endif
 
-/* Actually we could do this in the previous preprocessor
-   conditional but I want to stress the point that the
-   channel version in Tcl9 was changed to 5 */ 
-
-#if TCL_MAJOR_VERSION == 8
-#define UNIX_SOCKET_CHANNEL_VERSION TCL_CHANNEL_VERSION_2
-#else
-#define UNIX_SOCKET_CHANNEL_VERSION TCL_CHANNEL_VERSION_5
-#endif
-
 static Tcl_ChannelType unix_socket_channel_type = {
 	"unix_socket",
-	UNIX_SOCKET_CHANNEL_VERSION,
+	TCL_CHANNEL_VERSION_5,
 	closeProc,
 	inputProc,
 	outputProc,
@@ -72,7 +62,6 @@ static Tcl_ChannelType unix_socket_channel_type = {
 	NULL,	//truncateProc			// NULLable
 };
 
-
 typedef struct uds_state {
 	Tcl_Interp *	interp;
 	Tcl_Channel		channel;
@@ -81,7 +70,6 @@ typedef struct uds_state {
 	Tcl_Obj *		accept_handler;
 	Tcl_Obj *		path;
 } uds_state;
-
 
 static int closeProc(ClientData cdata,Tcl_Interp* interp) //<<<
 {
