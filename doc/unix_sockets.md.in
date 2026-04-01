@@ -1,0 +1,95 @@
+% @PACKAGE_NAME@(n) @PACKAGE_VERSION@ | Unix Domain Sockets for Tcl
+% Cyan Ogilvie
+% @PACKAGE_VERSION@
+
+
+# NAME
+
+@PACKAGE_NAME@ - Communicate using unix domain sockets
+
+
+## SYNOPSIS
+
+**package require @PACKAGE_NAME@** ?@PACKAGE_VERSION@?
+
+**unix_sockets::listen** *path* *accept_handler*\
+**unix_sockets::connect** *path*
+
+
+## DESCRIPTION
+
+Unix domain sockets are a filesystem based IPC mechanism similar to IP
+sockets, except that they can only be used by processes on the same
+system.  This package provides a wrapper to use them from Tcl scripts.
+
+The channels returned by these commands support the standard Tcl channel
+operations: **read**, **puts**, **gets**, **flush**, **close**,
+**chan configure**, **chan event**, etc.
+
+**unix_sockets::listen** *path* *accept_handler*
+
+:   Open a listening socket at *path*.  If *path* already exists, it is
+    unlinked first.  You must have permission to create *path* in its
+    parent directory.  When a client connects, *accept_handler* is
+    invoked with the channel handle of the new client connection
+    appended.  Returns the channel handle of the listening socket.
+
+**unix_sockets::connect** *path*
+
+:   Connect as a client to the unix domain socket at *path*.  Returns
+    the channel handle for the new connection.
+
+
+## EXAMPLES
+
+A simple server that echoes back to the client the first line it sends,
+then closes the socket:
+
+```tcl
+proc readable con {
+    set msg [gets $con]
+    puts $con $msg
+    close $con
+}
+
+proc accept con {
+    chan event $con readable [list readable $con]
+}
+
+set listen [unix_sockets::listen /tmp/example.socket accept]
+
+vwait ::forever
+```
+
+A client that opens a socket, writes a line to it, waits for a response
+and exits:
+
+```tcl
+proc readable con {
+    set msg [gets $con]
+    puts "got response: ($msg)"
+    set ::done 1
+}
+
+set con [unix_sockets::connect /tmp/example.socket]
+puts $con "hello, world"
+flush $con
+chan event $con readable [list readable $con]
+vwait ::done
+```
+
+
+## SEE ALSO
+
+close(n), chan(n), socket(n), read(n), puts(n), eof(n), fblocked(n),
+flush(n)
+
+
+## KEYWORDS
+
+socket, channel, unix, ipc
+
+
+## LICENSE
+
+This package is placed in the public domain by Cyan Ogilvie.

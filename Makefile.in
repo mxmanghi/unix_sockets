@@ -236,7 +236,7 @@ install-doc: doc
 	done
 
 test: binaries libraries
-	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS)
+	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) -load $(PACKAGE_LOAD)
 
 shell: binaries libraries
 	@$(TCLSH) $(SCRIPT)
@@ -310,43 +310,47 @@ dist: dist-clean
 	# TEA files
 	$(DIST_INSTALL_DATA) $(srcdir)/Makefile.in \
 	    $(srcdir)/aclocal.m4 $(srcdir)/configure.ac \
+	    $(srcdir)/Makefile.teabase.in \
 	    $(DIST_DIR)/
 	$(DIST_INSTALL_SCRIPT) $(srcdir)/configure $(DIST_DIR)/
 
 	$(INSTALL_DATA_DIR) $(DIST_DIR)/tclconfig
 	$(DIST_INSTALL_DATA) $(srcdir)/tclconfig/README.txt \
 	    $(srcdir)/tclconfig/tcl.m4 $(srcdir)/tclconfig/install-sh \
+	    $(srcdir)/tclconfig/license.terms \
 	    $(DIST_DIR)/tclconfig/
 
 	$(INSTALL_DATA_DIR) $(DIST_DIR)/teabase
-	$(DIST_INSTALL_DATA) \
-	    $(srcdir)/teabase/teabase.m4 \
-	    $(srcdir)/teabase/ax_cc_for_build.m4 \
-	    $(srcdir)/teabase/ax_check_compile_flag.m4 \
-	    $(srcdir)/teabase/ax_gcc_builtin.m4 \
-	    $(DIST_DIR)/teabase/
+	cd $(srcdir)/teabase && tar cf - . | (cd $(DIST_DIR)/teabase && tar xf -);
 
-	$(INSTALL_DATA_DIR) $(DIST_DIR)/bench
+	# Meson build system
 	$(DIST_INSTALL_DATA) \
-		$(srcdir)/teabase/teabase_bench-0.1.tm \
-		$(DIST_DIR)/bench/
+	    $(srcdir)/meson.build \
+	    $(DIST_DIR)/
 
 	# Extension files
 	$(DIST_INSTALL_DATA) \
 	    $(srcdir)/README.md \
 	    $(srcdir)/license.terms \
 	    $(srcdir)/pkgIndex.tcl.in \
-	    $(srcdir)/Makefile.teabase.in \
 	    $(srcdir)/suppressions \
 	    $(DIST_DIR)/
 
-	list='demos doc generic library mac tests unix win bench'; \
+	# Copy source directories
+	list='generic tests examples'; \
 	for p in $$list; do \
 	    if test -d $(srcdir)/$$p ; then \
 		$(INSTALL_DATA_DIR) $(DIST_DIR)/$$p; \
 		$(DIST_INSTALL_DATA) $(srcdir)/$$p/* $(DIST_DIR)/$$p/; \
 	    fi; \
 	done
+
+	# Doc directory (markdown source + meson build)
+	$(INSTALL_DATA_DIR) $(DIST_DIR)/doc
+	$(DIST_INSTALL_DATA) \
+	    $(srcdir)/doc/unix_sockets.md.in \
+	    $(srcdir)/doc/meson.build \
+	    $(DIST_DIR)/doc/
 
 	(cd $(DIST_ROOT); $(COMPRESS);)
 

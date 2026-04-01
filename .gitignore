@@ -4,7 +4,6 @@ autom4te.cache
 config.log
 config.status
 configure
-generic/config.h
 *.so
 *.o
 core
@@ -12,4 +11,7 @@ core.*
 pkgIndex.tcl
 configure~
 Makefile.teabase
-
+subprojects/hedley-*
+subprojects/packagecache
+subprojects/.wraplock
+/.cache

@@ -1,48 +1,41 @@
-# vim: ft=tcl foldmethod=marker foldmarker=<<<,>>> ts=4 shiftwidth=4
-
 if {[lsearch [namespace children] ::tcltest] == -1} {
 	package require tcltest 2.2.5
 	namespace import ::tcltest::*
 }
 
-package require unix_sockets
+::tcltest::loadTestedCommands
+
+::tcltest::testConstraint thread [expr {![catch {package require Thread}]}]
 
 set sockdir	[makeDirectory sockets]
 
+# uds-1.*: Basic functionality <<<
 test uds-1.1 {open a listening socket} -body { #<<<
 	set listen	[unix_sockets::listen [file join $sockdir uds-1.1] [list apply {
-		{con} {
-			close $con
-		}
+		con {close $con}
 	}]]
 } -cleanup {
 	if {[info exists listen]} {
 		close $listen
 	}
-} -match regexp -result {^unix_socket[0-9+]$}
+	unset -nocomplain listen
+} -match regexp -result {^unix_socket[0-9]+$}
 #>>>
 test uds-1.2 {echo loopback} -body { #<<<
-	set listen	[unix_sockets::listen [file join $sockdir uds-1.2] [list apply {
-		{con} {
-			chan event $con readable [list apply {
-				{con} {
-					set msg	[gets $con]
-					puts $con $msg
-					flush $con
-					close $con
-				}
-			} $con]
-		}
-	}]]
-	set client	[unix_sockets::connect [file join $sockdir uds-1.2]]
-	#puts stderr "client sock configure: [chan configure $client]"
-	chan configure $client -blocking 1
-	chan event $client readable [list apply {
-		{con} {
+	set listen	[unix_sockets::listen [file join $sockdir uds-1.2] [list apply {con {
+		chan event $con readable [list apply {con {
 			set msg	[gets $con]
-			set ::foo	$msg
-		}
-	} $client]
+			puts $con $msg
+			flush $con
+			close $con
+		}} $con]
+	}}]]
+	set client	[unix_sockets::connect [file join $sockdir uds-1.2]]
+	chan configure $client -blocking 1
+	chan event $client readable [list apply {con {
+		set msg	[gets $con]
+		set ::foo	$msg
+	}} $client]
 	puts $client "hello, world"
 	flush $client
 	after 1000 {set ::foo 2}
@@ -55,10 +48,370 @@ test uds-1.2 {echo loopback} -body { #<<<
 	if {[info exists client]} {
 		close $client
 	}
+	unset -nocomplain listen client ::foo
 } -result {hello, world}
 #>>>
+test uds-1.3 {socket file is removed on close} -body { #<<<
+	set path [file join $sockdir uds-1.3]
+	set listen [unix_sockets::listen $path [list apply {con {close $con}}]]
+	set exists_before [file exists $path]
+	close $listen
+	unset listen
+	set exists_after [file exists $path]
+	list $exists_before $exists_after
+} -cleanup {
+	if {[info exists listen]} {
+		close $listen
+	}
+	unset -nocomplain listen path exists_before exists_after
+} -result {1 0}
+#>>>
+test uds-1.4 {multiple clients} -body { #<<<
+	set results {}
+	set listen [unix_sockets::listen [file join $sockdir uds-1.4] [list apply {con {
+		chan event $con readable [list apply {con {
+			set msg [gets $con]
+			puts $con "echo:$msg"
+			flush $con
+			close $con
+		}} $con]
+	}}]]
+
+	foreach msg {alpha bravo charlie} {
+		set client [unix_sockets::connect [file join $sockdir uds-1.4]]
+		chan configure $client -blocking 1
+		puts $client $msg
+		flush $client
+		update
+		lappend results [gets $client]
+		close $client
+	}
+	set results
+} -cleanup {
+	if {[info exists listen]} {
+		close $listen
+	}
+	unset -nocomplain listen client results msg
+} -result {echo:alpha echo:bravo echo:charlie}
+#>>>
+test uds-1.5 {non-blocking channel configuration} -body { #<<<
+	set listen [unix_sockets::listen [file join $sockdir uds-1.5] [list apply {con {close $con}}]]
+	set client [unix_sockets::connect [file join $sockdir uds-1.5]]
+	chan configure $client -blocking 0
+	set blocking [chan configure $client -blocking]
+	close $client
+	close $listen
+	set blocking
+} -cleanup {
+	unset -nocomplain listen client blocking
+} -result 0
+#>>>
+# uds-1.*: Basic functionality >>>
+
+# uds-2.*: Argument errors <<<
+test uds-2.1 {listen: no args} -body { #<<<
+	unix_sockets::listen
+} -returnCodes error -result {*unix_sockets::listen path accept_handler*} -match glob -errorCode {TCL WRONGARGS}
+#>>>
+test uds-2.2 {listen: too few args} -body { #<<<
+	unix_sockets::listen /tmp/foo
+} -returnCodes error -result {*unix_sockets::listen path accept_handler*} -match glob -errorCode {TCL WRONGARGS}
+#>>>
+test uds-2.3 {listen: too many args} -body { #<<<
+	unix_sockets::listen /tmp/foo bar baz
+} -returnCodes error -result {*unix_sockets::listen path accept_handler*} -match glob -errorCode {TCL WRONGARGS}
+#>>>
+test uds-2.4 {connect: no args} -body { #<<<
+	unix_sockets::connect
+} -returnCodes error -result {*unix_sockets::connect path*} -match glob -errorCode {TCL WRONGARGS}
+#>>>
+test uds-2.5 {connect: too many args} -body { #<<<
+	unix_sockets::connect /tmp/foo bar
+} -returnCodes error -result {*unix_sockets::connect path*} -match glob -errorCode {TCL WRONGARGS}
+#>>>
+# uds-2.*: Argument errors >>>
+
+# uds-3.*: Path errors <<<
+test uds-3.1 {listen: path too long} -body { #<<<
+	unix_sockets::listen [string repeat x 200] handler
+} -returnCodes error -result {path is too long}
+#>>>
+test uds-3.2 {connect: path too long} -body { #<<<
+	unix_sockets::connect [string repeat x 200]
+} -returnCodes error -result {path is too long}
+#>>>
+test uds-3.3 {connect: nonexistent path} -body { #<<<
+	unix_sockets::connect [file join $sockdir nonexistent]
+} -returnCodes error -match glob -result {connect: *} -errorCode {POSIX ENOENT *}
+#>>>
+test uds-3.4 {listen: bind in nonexistent directory} -body { #<<<
+	unix_sockets::listen /tmp/nonexistent_uds_test_dir/sock handler
+} -returnCodes error -match glob -result {bind: *} -errorCode {POSIX ENOENT *}
+#>>>
+# uds-3.*: Path errors >>>
+
+# uds-4.*: Channel behaviour <<<
+test uds-4.1 {EOF detection} -body { #<<<
+	set listen [unix_sockets::listen [file join $sockdir uds-4.1] [list apply {con {
+		puts $con "hello"
+		flush $con
+		close $con
+	}}]]
+	set client [unix_sockets::connect [file join $sockdir uds-4.1]]
+	chan configure $client -blocking 1
+	update
+	set msg [read $client]
+	set eof [eof $client]
+	list [string trimright $msg \n] $eof
+} -cleanup {
+	if {[info exists listen]} {close $listen}
+	if {[info exists client]} {close $client}
+	unset -nocomplain listen client msg eof
+} -result {hello 1}
+#>>>
+test uds-4.2 {listen socket replaces existing path} -body { #<<<
+	set path [file join $sockdir uds-4.2]
+	set listen1 [unix_sockets::listen $path [list apply {con {close $con}}]]
+	# Open a second listener on the same path - should succeed (unlinks first)
+	set listen2 [unix_sockets::listen $path [list apply {con {close $con}}]]
+	close $listen1
+	close $listen2
+	set ok 1
+} -cleanup {
+	unset -nocomplain listen1 listen2 path ok
+} -result 1
+#>>>
+test uds-4.3 {binary data transfer} -body { #<<<
+	# Server echoes back a fixed-size binary payload
+	set listen [unix_sockets::listen [file join $sockdir uds-4.3] [list apply {con {
+		chan configure $con -translation binary -buffering full
+		chan event $con readable [list apply {con {
+			set data [read $con 10]
+			if {[string length $data] == 10} {
+				puts -nonewline $con $data
+				flush $con
+				close $con
+			}
+		}} $con]
+	}}]]
+	set client [unix_sockets::connect [file join $sockdir uds-4.3]]
+	chan configure $client -translation binary -blocking 1
+	set payload [binary format a10 "test\x00data!"]
+	puts -nonewline $client $payload
+	flush $client
+	update
+	set result [read $client 10]
+	string equal $payload $result
+} -cleanup {
+	if {[info exists listen]} {close $listen}
+	if {[info exists client]} {close $client}
+	unset -nocomplain listen client payload result
+} -result 1
+#>>>
+# uds-4.*: Channel behaviour >>>
+
+# uds-5.*: Channel transfer between interps <<<
+test uds-5.1 {transfer client channel to child interp} -body { #<<<
+	set listen [unix_sockets::listen [file join $sockdir uds-5.1] [list apply {con {
+		chan event $con readable [list apply {con {
+			set msg [gets $con]
+			if {[eof $con]} {close $con; return}
+			puts $con "echo:$msg"
+			flush $con
+		}} $con]
+	}}]]
+
+	set client [unix_sockets::connect [file join $sockdir uds-5.1]]
+	chan configure $client -blocking 1
+	update ;# trigger accept
+
+	interp create child
+	set chan_name $client
+	interp transfer {} $client child
+
+	child eval [list puts $chan_name "from child"]
+	child eval [list flush $chan_name]
+	update ;# process server echo
+	child eval [list gets $chan_name]
+} -cleanup {
+	catch {interp delete child}
+	catch {close $listen}
+	unset -nocomplain listen client chan_name
+} -result {echo:from child}
+#>>>
+test uds-5.2 {transfer accepted channel to child interp} -body { #<<<
+	set ::accepted {}
+	set listen [unix_sockets::listen [file join $sockdir uds-5.2] [list apply {con {
+		set ::accepted $con
+	}}]]
+
+	set client [unix_sockets::connect [file join $sockdir uds-5.2]]
+	chan configure $client -blocking 1
+	update ;# trigger accept
+
+	interp create child
+	interp transfer {} $::accepted child
+
+	puts $client "hello"
+	flush $client
+
+	child eval [list apply {chan {
+		chan configure $chan -blocking 1
+		set msg [gets $chan]
+		puts $chan "child:$msg"
+		flush $chan
+	}} $accepted]
+
+	gets $client
+} -cleanup {
+	catch {interp delete child}
+	catch {close $client}
+	catch {close $listen}
+	unset -nocomplain listen client ::accepted
+} -result {child:hello}
+#>>>
+# uds-5.*: Channel transfer between interps >>>
+
+# uds-6.*: Channel transfer between threads <<<
+test uds-6.1 {transfer client channel to worker thread} -constraints thread -body { #<<<
+	set listen [unix_sockets::listen [file join $sockdir uds-6.1] [list apply {con {
+		chan event $con readable [list apply {con {
+			set msg [gets $con]
+			if {[eof $con]} {close $con; return}
+			puts $con "echo:$msg"
+			flush $con
+		}} $con]
+	}}]]
+
+	set client		[unix_sockets::connect [file join $sockdir uds-6.1]]
+	update ;# trigger accept
+
+	set tid			[thread::create {thread::wait}]
+	set chan_name	$client
+	set main_tid	[thread::id]
+	thread::transfer $tid $client
+
+	# Worker sends data and reads response asynchronously, so the main
+	# thread event loop can process the server-side echo handler
+	thread::send -async $tid [list apply {{chan main_tid} {
+		chan configure $chan -blocking 1
+		puts $chan "from thread"
+		flush $chan
+		set response [gets $chan]
+		close $chan
+		thread::send -async $main_tid [list set ::thread_result $response]
+	}} $chan_name $main_tid]
+
+	after 200 {set ::thread_result timeout}
+	vwait ::thread_result
+	set ::thread_result
+} -cleanup {
+	catch {close $listen}
+	catch {thread::release -wait $tid}
+	unset -nocomplain listen client chan_name tid main_tid ::thread_result
+} -result {echo:from thread}
+#>>>
+test uds-6.2 {transfer accepted channel to worker thread} -constraints thread -body { #<<<
+	set ::accepted {}
+	set listen		[unix_sockets::listen [file join $sockdir uds-6.2] [list apply {con {
+		set ::accepted $con
+	}}]]
+
+	set client		[unix_sockets::connect [file join $sockdir uds-6.2]]
+	chan configure $client -blocking 1
+	update ;# trigger accept
+
+	set tid			[thread::create {thread::wait}]
+	thread::transfer $tid $::accepted
+
+	# Data is buffered before the synchronous thread::send, so the worker
+	# thread's blocking gets returns immediately — no deadlock
+	puts $client "hello"
+	flush $client
+
+	thread::send $tid [list apply {chan {
+		chan configure $chan -blocking 1
+		set msg [gets $chan]
+		puts $chan "thread:$msg"
+		flush $chan
+		close $chan
+	}} $::accepted]
+
+	gets $client
+} -cleanup {
+	catch {close $client}
+	catch {close $listen}
+	catch {thread::release -wait $tid}
+	unset -nocomplain listen client tid ::accepted
+} -result {thread:hello}
+#>>>
+# uds-6.*: Channel transfer between threads >>>
+
+# uds-7.*: Interp deletion defenses <<<
+test uds-7.1 {close listen socket after owning interp deleted} -body { #<<<
+	interp create child
+	load {} [string totitle unix_sockets] child
+	set path [file join $sockdir uds-7.1]
+	set listen [child eval [list unix_sockets::listen $path [list apply {con {close $con}}]]]
+	interp transfer child $listen {}
+	interp delete child
+
+	# close2Proc should handle con->interp == NULL (skips list unlinking)
+	close $listen
+} -cleanup {
+	catch {close $listen}
+	catch {interp delete child}
+	unset -nocomplain listen path
+} -result {}
+#>>>
+test uds-7.2 {accept after owning interp deleted} -body { #<<<
+	interp create child
+	load {} [string totitle unix_sockets] child
+	set path [file join $sockdir uds-7.2]
+	set listen [child eval [list unix_sockets::listen $path [list apply {con {close $con}}]]]
+	interp transfer child $listen {}
+	interp delete child
+
+	# Connect triggers accept_dispatcher which sees NULL interp,
+	# drains the accept, and removes the file handler
+	set client [unix_sockets::connect $path]
+	update
+
+	# Server never created a channel — client sees EOF
+	chan configure $client -blocking 0
+	read $client
+	eof $client
+} -cleanup {
+	catch {close $client}
+	catch {close $listen}
+	catch {interp delete child}
+	unset -nocomplain listen client path
+} -result 1
+#>>>
+test uds-7.3 {multiple listen sockets survive interp deletion} -body { #<<<
+	interp create child
+	load {} [string totitle unix_sockets] child
+	set path1 [file join $sockdir uds-7.3a]
+	set path2 [file join $sockdir uds-7.3b]
+	set l1 [child eval [list unix_sockets::listen $path1 handler]]
+	set l2 [child eval [list unix_sockets::listen $path2 handler]]
+	interp transfer child $l1 {}
+	interp transfer child $l2 {}
+	interp delete child
+
+	# Both channels close cleanly with NULL interp
+	close $l1
+	close $l2
+} -cleanup {
+	catch {close $l1}
+	catch {close $l2}
+	catch {interp delete child}
+	unset -nocomplain l1 l2 path1 path2
+} -result {}
+#>>>
+# uds-7.*: Interp deletion defenses >>>
 
 ::tcltest::cleanupTests
 return
 
-
+# vim: ft=tcl foldmethod=marker foldmarker=<<<,>>> ts=4 shiftwidth=4
