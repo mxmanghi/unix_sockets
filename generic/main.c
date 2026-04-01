@@ -162,10 +162,9 @@ static int getHandleProc(ClientData cdata, int direction, ClientData* handlePtr)
 
 static Tcl_ChannelType unix_socket_channel_type = {
 	.typeName		= "unix_socket",
-#if TCL_MAJOR_VERSION > 8
 	.version		= TCL_CHANNEL_VERSION_5,
-#else
-	.version		= TCL_CHANNEL_VERSION_2,
+#if TCL_MAJOR_VERSION < 9
+	.closeProc		= TCL_CLOSE2PROC,
 #endif
 	.inputProc		= inputProc,
 	.outputProc		= outputProc,

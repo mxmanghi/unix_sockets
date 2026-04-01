@@ -1,5 +1,5 @@
 project('unix_sockets', 'c',
-  version:          '0.6',
+  version:          '0.7',
   default_options:  ['c_std=c11', 'warning_level=3', 'werror=true'],
   meson_version:    '>=1.3.0',
 )
